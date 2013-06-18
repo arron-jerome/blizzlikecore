@@ -4,6 +4,7 @@
  */
 
 #include "ScriptPCH.h"
+#include "../scripts/Custom/sc_npc_teleport.h"
 
 #ifdef SCRIPTS
 
@@ -11,6 +12,10 @@
 //void AddSC_custom_example();
 //void AddSC_custom_gossip_codebox();
 //void AddSC_test();
+
+//custom
+void AddSC_npc_teleport();
+void AddSC_npc_codebox();
 
 //world
 void AddSC_areatrigger_scripts();
@@ -383,6 +388,12 @@ void AddScripts()
 //    AddSC_custom_example();
 //    AddSC_custom_gossip_codebox();
 //    AddSC_test();
+    //Custom
+    AddSC_npc_codebox();
+    AddSC_npc_teleport();
+    QueryResult_AutoPtr result;
+    LoadNpcTele(result);
+
     AddSC_areatrigger_scripts();
     AddSC_boss_emeriss();
     AddSC_boss_taerar();
