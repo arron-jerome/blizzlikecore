@@ -6860,7 +6860,6 @@ bool Unit::AttackStop()
         }
     }
 
-
     SendMeleeAttackStop(victim);
 
     return true;

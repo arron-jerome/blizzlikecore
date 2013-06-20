@@ -2797,12 +2797,13 @@ bool Player::addSpell(uint32 spell_id, bool active, bool learning, bool loading,
         }
     }
 
-    TalentSpellPos const* talentPos = GetTalentSpellPos(spell_id);
+    //TalentSpellPos const* talentPos = GetTalentSpellPos(spell_id);
 
-    if (!disabled_case) // skip new spell adding if spell already known (disabled spells case)
+    if (!disabled_case)  
     {
         // talent: unlearn all other talent ranks (high and low)
-        if (talentPos && spell_id != 12788 && spell_id != 12789)
+        //if (talentPos && spell_id != 12788 && spell_id != 12789)
+        if (TalentSpellPos const* talentPos = GetTalentSpellPos(spell_id))
         {
             if (TalentEntry const *talentInfo = sTalentStore.LookupEntry(talentPos->talent_id))
             {
@@ -3359,7 +3360,8 @@ bool Player::resetTalents(bool no_cost)
     {
         TalentEntry const *talentInfo = sTalentStore.LookupEntry(i);
 
-        if (!talentInfo) continue;
+        if (!talentInfo)
+            continue;
 
         TalentTabEntry const *talentTabInfo = sTalentTabStore.LookupEntry(talentInfo->TalentTab);
 
@@ -3372,7 +3374,7 @@ bool Player::resetTalents(bool no_cost)
         if ((getClassMask() & talentTabInfo->ClassMask) == 0)
             continue;
 
-        for (int j = 0; j < 5; ++j)
+        for (int j = 0; j < MAX_TALENT_RANK; ++j)
         {
             for (PlayerSpellMap::iterator itr = GetSpellMap().begin(); itr != GetSpellMap().end();)
             {
@@ -3388,7 +3390,7 @@ bool Player::resetTalents(bool no_cost)
                 // unlearn if first rank is talent or learned by talent
                 if (itrFirstId == talentInfo->RankID[j] || spellmgr.IsSpellLearnToSpell(talentInfo->RankID[j],itrFirstId))
                 {
-                    removeSpell(itr->first,!IsPassiveSpell(itr->first));
+                    removeSpell(itr->first, !IsPassiveSpell(itr->first));
                     itr = GetSpellMap().begin();
                     continue;
                 }
@@ -20916,7 +20918,7 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
         }
     }
 
-    // Check if it requires spell
+     // Check if it requires spell
     if (talentInfo->DependsOnSpell && !HasSpell(talentInfo->DependsOnSpell))
         return;
 
@@ -20927,11 +20929,11 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
     if (talentInfo->Row > 0)
     {
         unsigned int numRows = sTalentStore.GetNumRows();
-        for (unsigned int i = 0; i < numRows; ++i)          // Loop through all talents.
+        for (unsigned int i = 0; i < numRows; ++i) // Loop through all talents.
         {
             // Someday, someone needs to revamp
             const TalentEntry* tmpTalent = sTalentStore.LookupEntry(i);
-            if (tmpTalent)                                  // the way talents are tracked
+            if (tmpTalent) // the way talents are tracked
             {
                 if (tmpTalent->TalentTab == tTab)
                 {

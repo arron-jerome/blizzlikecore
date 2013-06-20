@@ -1320,77 +1320,86 @@ CreatureAI* GetAI_npc_force_of_nature_treants(Creature* pCreature)
 ## npc_snake_trap_serpents
 ####*/
 
-#define SPELL_MIND_NUMBING_POISON    8692    //Viper
-#define SPELL_DEADLY_POISON          34655   //Venomous Snake
-#define SPELL_CRIPPLING_POISON       3409    //Viper
+enum SnakeTrap
+{
+    SPELL_MIND_NUMBING_POISON     = 25810,  // Viper poison 1
+    SPELL_DEADLY_POISON           = 34655,  // Viper poison 2
+    SPELL_CRIPPLING_POISON        = 30981,  // Viper poison 3
 
-#define VENOMOUS_SNAKE_TIMER 1200
+    NPC_VIPER                     = 19921   // Viper
+};
+
+#define VENOMOUS_SNAKE_TIMER 1500
 #define VIPER_TIMER 3000
-
-#define C_VIPER 19921
+#define RAND 5
 
 struct npc_snake_trap_serpentsAI : public ScriptedAI
 {
-    npc_snake_trap_serpentsAI(Creature* c) : ScriptedAI(c), SpellTimer(0) {}
+    npc_snake_trap_serpentsAI(Creature* creature) : ScriptedAI(creature) {}
 
-    int32 SpellTimer;
-    Unit* Owner;
+    uint32 SpellTimer;
     bool IsViper;
 
     void EnterCombat(Unit* /*who*/) {}
 
     void Reset()
     {
-        Owner = me->GetOwner();
+        SpellTimer = 0;
 
-        if (!Owner)
-            return;
+        CreatureInfo const* Info = me->GetCreatureInfo();
 
-        CreatureInfo const *Info = me->GetCreatureInfo();
-
-        if (Info->Entry == C_VIPER)
+        if (Info->Entry == NPC_VIPER)
             IsViper = true;
         else
             IsViper = false;
 
-        //Add delta to make them not all hit the same time
+        me->SetMaxHealth(uint32(107 * (me->getLevel() - 40) * 0.025f));
+        // Add delta to make them not all hit the same time
         uint32 delta = (rand() % 7) * 100;
-        me->SetStatFloatValue(UNIT_FIELD_BASEATTACKTIME, Info->baseattacktime + delta);
-        me->SetStatFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER , Info->attackpower);
+        me->SetStatFloatValue(UNIT_FIELD_BASEATTACKTIME, float(Info->baseattacktime + delta));
+        me->SetStatFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER , float(Info->attackpower));
 
-        if (Unit* attacker = Owner->getAttackerForHelper())
+        // Start attacking attacker of owner on first ai update after spawn - move in line of sight may choose better target
+        if (!me->getVictim() && me->isSummon())
+            if (Unit * Owner = CAST_SUM(me)->GetSummoner())
+                if (Owner->getAttackerForHelper())
+                    AttackStart(Owner->getAttackerForHelper());
+    }
+
+    // Redefined for random target selection:
+    void MoveInLineOfSight(Unit *who)
+    {
+        if (!me->getVictim() && who->isTargetableForAttack() && (me->IsHostileTo(who)) && who->isInAccessiblePlaceFor(me))
         {
-            me->SetInCombatWith(attacker);
-            AttackStart(attacker);
-        }   
+            if (me->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
+                return;
+
+            float attackRadius = me->GetAttackDistance(who);
+            if (me->IsWithinDistInMap(who, attackRadius) && me->IsWithinLOSInMap(who))
+            {
+                if (!(rand() % RAND))
+                {
+                    me->setAttackTimer(BASE_ATTACK, (rand() % 10) * 100);
+                    SpellTimer = (rand() % 10) * 100;
+                    AttackStart(who);
+                }
+            }
+        }
     }
 
     void UpdateAI(const uint32 diff)
     {
-        if (!Owner)
+        if (!UpdateVictim())
             return;
-
-        if (!me->getVictim())
-        {
-            if (Owner->getAttackerForHelper())
-            {
-                AttackStart(Owner->getAttackerForHelper());
-            }
-            else if (!me->hasUnitState(UNIT_STAT_FOLLOW))
-            {
-                me->GetMotionMaster()->Clear();
-                me->GetMotionMaster()->MoveFollow(Owner,PET_FOLLOW_DIST,PET_FOLLOW_ANGLE);
-            }
-        }
 
         if (SpellTimer <= diff)
         {
-            if (IsViper) //Viper
+            if (IsViper) // Viper
             {
-                if (urand(0,2) == 0) //33% chance to cast
+                if (urand(0, 2) == 0) // 33% chance to cast
                 {
                     uint32 spell;
-                    if (urand(0,1) == 0)
+                    if (urand(0, 1) == 0)
                         spell = SPELL_MIND_NUMBING_POISON;
                     else
                         spell = SPELL_CRIPPLING_POISON;
@@ -1400,9 +1409,9 @@ struct npc_snake_trap_serpentsAI : public ScriptedAI
 
                 SpellTimer = VIPER_TIMER;
             }
-            else //Venomous Snake
+            else // Venomous Snake
             {
-                if (rand() % 10 < 8) //80% chance to cast
+                if (urand(0, 2) == 0) // 33% chance to cast
                     DoCast(me->getVictim(), SPELL_DEADLY_POISON);
                 SpellTimer = VENOMOUS_SNAKE_TIMER + (rand() %5)*100;
             }
@@ -1412,9 +1421,9 @@ struct npc_snake_trap_serpentsAI : public ScriptedAI
      }
 };
 
-CreatureAI* GetAI_npc_snake_trap_serpents(Creature* pCreature)
+CreatureAI* GetAI_npc_snake_trap_serpents(Creature* creature)
 {
-    return new npc_snake_trap_serpentsAI(pCreature);
+    return new npc_snake_trap_serpentsAI(creature);
 }
 
 #define SAY_RANDOM_MOJO0    "Now that's what I call froggy-style!"
